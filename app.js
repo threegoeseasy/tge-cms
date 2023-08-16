@@ -37,7 +37,6 @@ const db = new sqlite3.Database("data.db", (err) => {
 const authenticate = (req, res, next) => {
   const { password } = req.body;
 
-  // Replace these hardcoded values with your actual username and password
   const validPassword = process.env.USER_PASSWORD;
 
   if (password === validPassword) {
@@ -221,7 +220,7 @@ app.get("/cleanup", (req, res) => {
 });
 
 // Start the server
-const PORT = 3333;
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
