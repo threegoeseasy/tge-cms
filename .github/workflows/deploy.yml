@@ -1,7 +1,7 @@
 name: Deploy CMS
 on: workflow_dispatch
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     env:
       SSH_KEY: ${{secrets.SSH_KEY}}
@@ -10,10 +10,15 @@ jobs:
         uses: actions/checkout@v3
       - name: Make temp ssh folder on github machine
         run: mkdir ~/.ssh
-      - run: echo "$SSH_KEY" >> ~/.ssh/github-action
-      - run: chmod 400 ~/.ssh/github-action
-      - run: echo -e "Host vps\n\tUser c62008\n\tHostname 91.201.52.213\n\tIdentityFile ~/.ssh/github-action\n\tStrictHostKeyChecking No" >> ~/.ssh/config
-      - run: rsync -re ssh ./ vps:/home/c62008/${{secrets.CMS_HOST}}/app
-      - run: ssh vps "cd /home/c62008/${{secrets.CMS_HOST}}/app && ls"
+      - name: Add ssh key to machine
+        run: echo "$SSH_KEY" >> ~/.ssh/github-action
+      - name: Give permissions
+        run: chmod 400 ~/.ssh/github-action
+      - name: Add ssh config
+        run: echo -e "Host vps\n\tUser c62008\n\tHostname 91.201.52.213\n\tIdentityFile ~/.ssh/github-action\n\tStrictHostKeyChecking No" >> ~/.ssh/config
+      - name: Send application files 
+        run: rsync -re ssh ./ vps:/home/c62008/${{secrets.CMS_HOST}}/app
+      - name: Check files, install deps and run the app
+        run: ssh vps "cd /home/c62008/${{secrets.CMS_HOST}}/app && ls && npm ci && npm run start"
       # - run: ssh vps "npm ci"
       # - run: ssh vps "pm2 npm run start"
