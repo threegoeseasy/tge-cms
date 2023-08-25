@@ -1,0 +1,20 @@
+name: Deploy CMS
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      SSH_KEY: ${{secrets.SSH_KEY}}
+      CMS_HOST: ${{secrets.CMS_HOST}}
+    steps:
+      - name: Get repository code
+        uses: actions/checkout@v3
+      - name: Make temp ssh folder on github machine
+        run: mkdir ~/.ssh
+      - run: echo "$SSH_KEY" >> ~/.ssh/github-action
+      - run: chmod 400 ~/.ssh/github-action
+      - run: echo -e "Host vps\n\tUser c62008\n\tHostname 91.201.52.213\n\tIdentityFile ~/.ssh/github-action\n\tStrictHostKeyChecking No" >> ~/.ssh/config
+      - run: rsync -re ssh ./ vps:/home/root/$CMS_HOST/app
+      - run: ssh vps "cd /home/root/$CMS_HOST/app && ls"
+      # - run: ssh vps "npm ci"
+      # - run: ssh vps "pm2 npm run start"
