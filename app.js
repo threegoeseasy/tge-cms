@@ -221,7 +221,7 @@ app.get("/cleanup", (req, res) => {
 });
 
 // Start the server
-const PORT = process.env.PORT;
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+const [PORT, HOST] = [process.env.APP_PORT, process.env.APP_IP];
+app.listen(PORT, HOST, () => {
+  console.log(`Server is running on http://${HOST}:${PORT}`);
 });
