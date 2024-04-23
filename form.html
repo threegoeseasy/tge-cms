@@ -25,5 +25,40 @@
       <br />
       <input type="submit" value="Create Record" />
     </form>
+
+    <form
+      id="deleteForm"
+      style="margin-top: 30px"
+      action="/delete"
+      method="post"
+      enctype="multipart/form-data"
+    >
+      <label for="title">Title:</label>
+      <input type="text" id="title" name="title" required />
+      <input type="submit" value="DELETE Record" />
+    </form>
   </body>
+
+  <script>
+    document
+      .getElementById("deleteForm")
+      .addEventListener("submit", function (event) {
+        event.preventDefault(); // Prevent the form from submitting normally
+
+        // Create a FormData object from the form
+        var formData = new FormData(event.target);
+
+        // Send a DELETE request using fetch
+        fetch("/delete", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams(formData).toString(),
+        })
+          .then((response) => response.text())
+          .then((data) => console.log(data))
+          .catch((error) => console.error("Error:", error));
+      });
+  </script>
 </html>

@@ -80,6 +80,26 @@ app.post(
   }
 );
 
+//DELETE
+app.delete(
+  "/delete",
+  express.urlencoded({ extended: true }),
+  checkAuthentication,
+  (req, res) => {
+    const { title } = req.body;
+    const deleteSql = "DELETE FROM records WHERE title = ?";
+    db.run(deleteSql, [title], (err, row) => {
+      if (err) {
+        console.error("Error checking record:", err.message);
+        res.status(500).send("Error checking record");
+      } else {
+        console.log(`Record with title "${title}" deleted.`);
+        res.send("Record deleted successfully!");
+      }
+    });
+  }
+);
+
 // Serve the main HTML form with authentication check
 app.get("/", checkAuthentication, (req, res) => {
   res.sendFile(path.join(__dirname, "form.html"));
