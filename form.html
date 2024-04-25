@@ -2,9 +2,17 @@
 <html>
   <head>
     <title>&nbsp;</title>
+    <style>
+      /* Basic styling for the posts */
+      .post {
+        border: 1px solid #ccc;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+    </style>
   </head>
   <body>
-    <h1>CMS Form</h1>
+    <h1>Project Form</h1>
     <form
       id="cmsForm"
       action="/saveRecord"
@@ -37,28 +45,64 @@
       <input type="text" id="title" name="title" required />
       <input type="submit" value="DELETE Record" />
     </form>
-  </body>
 
-  <script>
-    document
-      .getElementById("deleteForm")
-      .addEventListener("submit", function (event) {
-        event.preventDefault(); // Prevent the form from submitting normally
+    <form action="/savePost" method="post" enctype="multipart/form-data">
+      <h1>Blog Post</h1>
+      <textarea name="content" id="my-expressjs-tinymce-app"></textarea>
+      <input type="submit" value="Create blog post" />
+    </form>
 
-        // Create a FormData object from the form
-        var formData = new FormData(event.target);
+    <div id="posts-container"></div>
 
-        // Send a DELETE request using fetch
-        fetch("/delete", {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams(formData).toString(),
+    <script>
+      // Fetch the blog posts from the server
+      fetch("/getAllPosts")
+        .then((response) => response.json())
+        .then((posts) => {
+          // Get the container where you want to display the posts
+          const container = document.getElementById("posts-container");
+
+          // Loop through each post and create HTML elements to display it
+          posts.forEach((post) => {
+            const postDiv = document.createElement("div");
+            postDiv.className = "post";
+
+            // Directly insert the HTML content into the postDiv
+            postDiv.innerHTML = post.content;
+
+            // Append the post to the container
+            container.appendChild(postDiv);
+          });
         })
-          .then((response) => response.text())
-          .then((data) => console.log(data))
-          .catch((error) => console.error("Error:", error));
-      });
-  </script>
+        .catch((error) => console.error("Error fetching posts:", error));
+    </script>
+
+    <script
+      type="application/javascript"
+      src="/tinymce/js/tinymce/tinymce.min.js"
+    ></script>
+    <script type="application/javascript" src="/my-tinymce-config.js"></script>
+    <script>
+      document
+        .getElementById("deleteForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault(); // Prevent the form from submitting normally
+
+          // Create a FormData object from the form
+          var formData = new FormData(event.target);
+
+          // Send a DELETE request using fetch
+          fetch("/delete", {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams(formData).toString(),
+          })
+            .then((response) => response.text())
+            .then((data) => console.log(data))
+            .catch((error) => console.error("Error:", error));
+        });
+    </script>
+  </body>
 </html>

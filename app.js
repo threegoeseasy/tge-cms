@@ -2,27 +2,30 @@ require("dotenv").config();
 const express = require("express");
 const multer = require("multer");
 const sqlite3 = require("sqlite3").verbose();
-const app = express();
 const upload = multer({ dest: "uploads/" });
 const path = require("path");
 const fs = require("fs");
 const cookieParser = require("cookie-parser");
 const favicon = require("serve-favicon");
 
-// Use cookie parser middleware
-app.use(cookieParser());
+const app = express();
+
 app.use(favicon(path.join(__dirname, "public", "favicon.ico")));
-app.locals.title = "TGE CMS";
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/tinymce", express.static(path.join(__dirname, "tinymce")));
+app.use(express.static(path.join(__dirname, "public")));
+
+app.use(cookieParser());
+app.locals.title = "TGE CMS";
 
 // Create and connect to the SQLite database
-const db = new sqlite3.Database("data.db", (err) => {
+const db = new sqlite3.Database("data.db", async (err) => {
   if (err) {
     console.error("Error opening database:", err.message);
   } else {
     console.log("Connected to the database.");
     // Create the table if it doesn't exist
-    db.run(`
+    await db.run(`
       CREATE TABLE IF NOT EXISTS records (
         id INTEGER PRIMARY KEY,
         title TEXT,
@@ -31,6 +34,13 @@ const db = new sqlite3.Database("data.db", (err) => {
         link TEXT
       )
     `);
+    console.log("records checked");
+    await db.run(` CREATE TABLE IF NOT EXISTS blog_posts (
+    id INTEGER PRIMARY KEY,
+    content TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`);
+    console.log("blog checked");
   }
 });
 
@@ -165,9 +175,39 @@ app.post(
   }
 );
 
+// Upload blog post
+app.post("/savePost", upload.none(), async (req, res) => {
+  try {
+    // Extract the content from the TinyMCE editor
+    const content = req.body.content; // Adjust this based on how TinyMCE sends the data
+
+    // Insert the content into the database
+    await db.run(`INSERT INTO blog_posts (content) VALUES (?)`, [content]);
+
+    // Send a response back to the client
+    res.send("Record inserted successfully!");
+  } catch (error) {
+    console.error("Error saving blog post:", error);
+    res.status(500).send("Error saving blog post");
+  }
+});
+
 // Endpoint to get all records
 app.get("/getAllRecords", (req, res) => {
   const sql = "SELECT * FROM records";
+  db.all(sql, [], (err, rows) => {
+    if (err) {
+      console.error("Error retrieving records:", err.message);
+      res.status(500).send("Error retrieving records");
+    } else {
+      res.json(rows);
+    }
+  });
+});
+
+// Endpoint to get all records
+app.get("/getAllPosts", (req, res) => {
+  const sql = "SELECT * FROM blog_posts";
   db.all(sql, [], (err, rows) => {
     if (err) {
       console.error("Error retrieving records:", err.message);
