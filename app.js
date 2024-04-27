@@ -211,8 +211,6 @@ app.post(
       image = uniqueFilename;
     }
 
-    console.log({ location: "uploads/" + image });
-
     res.json({ location: "uploads/" + image });
   }
 );
