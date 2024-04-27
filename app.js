@@ -192,6 +192,31 @@ app.post("/savePost", upload.none(), async (req, res) => {
   }
 });
 
+// Handle form submission
+app.post(
+  "/saveImage",
+  checkAuthentication,
+  upload.single("file"),
+  (req, res) => {
+    const imageFile = req.file;
+    let image = null;
+    if (imageFile) {
+      // Generate a new unique filename for the uploaded image
+      const uniqueFilename = `${Date.now()}-${imageFile.originalname}`;
+      const imagePath = path.join(__dirname, "uploads", uniqueFilename);
+
+      // Move the uploaded file to the specified path with the new filename
+      fs.renameSync(imageFile.path, imagePath);
+
+      image = uniqueFilename;
+    }
+
+    console.log({ location: "uploads/" + image });
+
+    res.json({ location: "uploads/" + image });
+  }
+);
+
 // Endpoint to get all records
 app.get("/getAllRecords", (req, res) => {
   const sql = "SELECT * FROM records";
