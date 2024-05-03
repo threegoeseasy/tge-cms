@@ -3,6 +3,7 @@ const express = require("express");
 const multer = require("multer");
 const sqlite3 = require("sqlite3").verbose();
 const upload = multer({ dest: "uploads/" });
+const uploadBlog = multer({ dest: "uploads_blog/" });
 const path = require("path");
 const fs = require("fs");
 const cookieParser = require("cookie-parser");
@@ -12,6 +13,7 @@ const app = express();
 
 app.use(favicon(path.join(__dirname, "public", "favicon.ico")));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads_blog", express.static(path.join(__dirname, "uploads_blog")));
 app.use("/tinymce", express.static(path.join(__dirname, "tinymce")));
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -176,7 +178,7 @@ app.post(
 );
 
 // Upload blog post
-app.post("/savePost", upload.none(), async (req, res) => {
+app.post("/savePost", uploadBlog.none(), async (req, res) => {
   try {
     // Extract the content from the TinyMCE editor
     const content = req.body.content; // Adjust this based on how TinyMCE sends the data
@@ -196,37 +198,31 @@ app.post("/savePost", upload.none(), async (req, res) => {
 app.post(
   "/saveImage",
   checkAuthentication,
-  upload.single("file"),
+  uploadBlog.single("file"),
   (req, res) => {
     const imageFile = req.file;
     let image = null;
     if (imageFile) {
       // Generate a new unique filename for the uploaded image
       const uniqueFilename = `${Date.now()}-${imageFile.originalname}`;
-      const imagePath = path.join(__dirname, "uploads", uniqueFilename);
+      const imagePath = path.join(__dirname, "uploads_blog", uniqueFilename);
 
       // Move the uploaded file to the specified path with the new filename
-      fs.renameSync(imageFile.path, imagePath);
+      fs.rename(imageFile.path, imagePath, (err) => {
+        if (err) {
+          console.error("Error moving file:", err);
+          return res.status(500).json({ error: "Failed to save image" });
+        }
 
-      image = uniqueFilename;
+        image = uniqueFilename;
+        //  console.log(imageFile.path, imagePath, image);
+        res.json({ location: image }); // Return only the filename
+      });
+    } else {
+      res.status(400).json({ error: "No file uploaded" });
     }
-
-    res.json({ location: "uploads/" + image });
   }
 );
-
-// Endpoint to get all records
-app.get("/getAllRecords", (req, res) => {
-  const sql = "SELECT * FROM records";
-  db.all(sql, [], (err, rows) => {
-    if (err) {
-      console.error("Error retrieving records:", err.message);
-      res.status(500).send("Error retrieving records");
-    } else {
-      res.json(rows);
-    }
-  });
-});
 
 // Endpoint to get all records
 app.get("/getAllPosts", (req, res) => {
