@@ -237,6 +237,19 @@ app.get("/getAllPosts", (req, res) => {
   });
 });
 
+// Endpoint to get all records
+app.get("/getAllRecords", (req, res) => {
+  const sql = "SELECT * FROM records";
+  db.all(sql, [], (err, rows) => {
+    if (err) {
+      console.error("Error retrieving records:", err.message);
+      res.status(500).send("Error retrieving records");
+    } else {
+      res.json(rows);
+    }
+  });
+});
+
 // Function to fetch filenames from the database
 const fetchFilenamesFromDatabase = (callback) => {
   const query = "SELECT image FROM records"; // Replace 'image' with the column name where you store filenames
