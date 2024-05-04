@@ -186,8 +186,9 @@ app.post("/savePost", uploadBlog.none(), async (req, res) => {
     // Insert the content into the database
     await db.run(`INSERT INTO blog_posts (content) VALUES (?)`, [content]);
 
-    // Send a response back to the client
-    res.send("Record inserted successfully!");
+    // Send a temporary redirect to success page after 2 seconds with meta refresh
+    res.setHeader("Refresh", "2; URL=/"); // Replace with your desired URL
+    res.send("<h1>Record inserted successfully!</h1>");
   } catch (error) {
     console.error("Error saving blog post:", error);
     res.status(500).send("Error saving blog post");
@@ -252,14 +253,14 @@ app.get("/getAllRecords", (req, res) => {
 
 // Function to fetch filenames from the database
 const fetchFilenamesFromDatabase = (callback) => {
-  const query = "SELECT image FROM records"; // Replace 'image' with the column name where you store filenames
+  const query = "SELECT image FROM records"; // Replace 'image' with the column name
 
   db.all(query, (err, rows) => {
     if (err) {
       console.error("Error executing query:", err);
       callback(err, null);
     } else {
-      // Extract the filenames from the query result and return them as an array
+      // Extract filenames from the query result and return them as an array
       const filenames = rows.map((row) => row.image);
       callback(null, filenames);
     }
@@ -267,26 +268,21 @@ const fetchFilenamesFromDatabase = (callback) => {
 };
 
 // Function to check and clean up unnecessary files in the uploads folder
-const cleanupUploadsFolder = () => {
+cleanupUploadsFolder = () => {
   fs.readdir("uploads", (err, files) => {
     if (err) {
       console.error("Error reading the uploads folder:", err);
       return;
     }
 
-    // Fetch the filenames from the database (you need to implement this function)
-    // Assuming you have a function fetchFilenamesFromDatabase() to get filenames from the database
     fetchFilenamesFromDatabase((err, dbFilenames) => {
       if (err) {
         console.error("Error fetching filenames from the database:", err);
         return;
       }
 
-      // Check each file in the uploads folder
       files.forEach((filename) => {
-        // Check if the filename is not present in the database
         if (!dbFilenames.includes(filename)) {
-          // If not present, remove the file from the uploads folder
           const filePath = path.join("uploads", filename);
           fs.unlink(filePath, (err) => {
             if (err) {
