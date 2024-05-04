@@ -72,6 +72,34 @@
 
             // Append the post to the container
             container.appendChild(postDiv);
+
+            // Create a delete button with a unique ID based on the post ID
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "Delete";
+            deleteButton.dataset.postId = post.id; // Add post ID as data attribute
+
+            // Add click event listener to the delete button
+            deleteButton.addEventListener("click", function (event) {
+              const postId = event.target.dataset.postId;
+
+              // Confirmation before deletion (optional)
+              if (confirm("Are you sure you want to delete this post?")) {
+                fetch(`/deletePost/${postId}`, { method: "DELETE" })
+                  .then((response) => response.text())
+                  .then((data) => {
+                    console.log(data);
+                    if (data.includes("deleted")) {
+                      container.removeChild(postDiv); // Remove from DOM on success
+                    } else {
+                      alert("Error deleting post!"); // Inform user of error
+                    }
+                  })
+                  .catch((error) => console.error("Error:", error));
+              }
+            });
+
+            // Append the delete button and post content to the post div
+            postDiv.appendChild(deleteButton);
           });
         })
         .catch((error) => console.error("Error fetching posts:", error));

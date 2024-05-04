@@ -195,6 +195,26 @@ app.post("/savePost", uploadBlog.none(), async (req, res) => {
   }
 });
 
+// Endpoint for deleting a post by ID
+app.delete(
+  "/deletePost/:id",
+  express.urlencoded({ extended: true }),
+  checkAuthentication,
+  (req, res) => {
+    const postId = req.params.id;
+
+    db.run("DELETE FROM blog_posts WHERE id = ?", [postId], (err) => {
+      if (err) {
+        console.error("Error deleting post:", err.message);
+        res.status(500).send("Error deleting post");
+      } else {
+        console.log(`Post with ID ${postId} deleted.`);
+        res.send("Post deleted successfully!");
+      }
+    });
+  }
+);
+
 // Handle form submission
 app.post(
   "/saveImage",
