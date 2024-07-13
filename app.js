@@ -63,6 +63,39 @@ const authenticate = (req, res, next) => {
   }
 };
 
+const githubDispatch = async (req, res, next) => {
+  try {
+    const owner = 'threegoeseasy';
+    const repo = 'threegoeseasy-astro';
+    const token = process.env.GITHUB_TOKEN; // Store this securely, e.g., in environment variables
+
+    const url = `https://api.github.com/repos/${owner}/${repo}/dispatches`;
+    const headers = {
+      "Accept": "application/vnd.github+json",
+      "Authorization": `token ${token}`
+    };
+    const body = JSON.stringify({
+      event_type: "webhook"
+    });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: headers,
+      body: body
+    });
+
+    if (!response.ok) {
+      throw new Error(`GitHub dispatch failed: ${response.statusText}`);
+    }
+
+    console.log('GitHub dispatch triggered successfully.');
+    next();
+  } catch (error) {
+    console.error('Error triggering GitHub dispatch:', error.message);
+    res.status(500).send('Error triggering GitHub dispatch');
+  }
+};
+
 // Authentication check middleware for the main form
 const checkAuthentication = (req, res, next) => {
   const isAuthenticated = req.cookies.user === "godmode";
@@ -178,41 +211,59 @@ app.post(
 );
 
 // Upload blog post
-app.post("/savePost", uploadBlog.none(), async (req, res) => {
-  try {
-    // Extract the content from the TinyMCE editor
-    const content = req.body.content; // Adjust this based on how TinyMCE sends the data
+app.post(
+    "/savePost",
+    checkAuthentication,
+    uploadBlog.none(),
+    async (req, res, next) => {
+      try {
+        // Extract the content from the TinyMCE editor
+        const content = req.body.content; // Adjust this based on how TinyMCE sends the data
 
-    // Insert the content into the database
-    await db.run(`INSERT INTO blog_posts (content) VALUES (?)`, [content]);
+        // Insert the content into the database
+        await db.run(`INSERT INTO blog_posts (content) VALUES (?)`, [content]);
 
-    // Send a temporary redirect to success page after 2 seconds with meta refresh
-    res.setHeader("Refresh", "2; URL=/"); // Replace with your desired URL
-    res.send("<h1>Record inserted successfully!</h1>");
-  } catch (error) {
-    console.error("Error saving blog post:", error);
-    res.status(500).send("Error saving blog post");
-  }
-});
+        console.log("Post saved successfully.");
+        next(); // Proceed to the next middleware (githubDispatch)
+      } catch (error) {
+        console.error("Error saving blog post:", error);
+        res.status(500).send("Error saving blog post");
+      }
+    },
+    githubDispatch, // Add the middleware here
+    (req, res) => {
+      // Send a temporary redirect to success page after 2 seconds with meta refresh
+      res.setHeader("Refresh", "2; URL=/"); // Replace with your desired URL
+      res.send("<h1 style='color: green'>Record inserted successfully!</h1>");
+    }
+);
 
 // Endpoint for deleting a post by ID
+// Endpoint for deleting a post by ID
 app.delete(
-  "/deletePost/:id",
-  express.urlencoded({ extended: true }),
-  checkAuthentication,
-  (req, res) => {
-    const postId = req.params.id;
+    "/deletePost/:id",
+    express.urlencoded({ extended: true }),
+    checkAuthentication,
+    (req, res, next) => {
+      const postId = req.params.id;
 
-    db.run("DELETE FROM blog_posts WHERE id = ?", [postId], (err) => {
-      if (err) {
-        console.error("Error deleting post:", err.message);
-        res.status(500).send("Error deleting post");
-      } else {
-        console.log(`Post with ID ${postId} deleted.`);
-        res.send("Post deleted successfully!");
-      }
-    });
-  }
+      db.run("DELETE FROM blog_posts WHERE id = ?", [postId], (err) => {
+        if (err) {
+          console.error("Error deleting post:", err.message);
+          return res.status(500).send("Error deleting post");
+        } else {
+          console.log(`Post with ID ${postId} deleted.`);
+          req.postId = postId; // Store postId in request object to use in the next middleware if needed
+          next(); // Proceed to the next middleware (githubDispatch)
+        }
+      });
+    },
+    githubDispatch, // Add the middleware here
+    (req, res) => {
+      // Send a temporary redirect to success page after 2 seconds with meta refresh
+      res.setHeader("Refresh", "2; URL=/"); // Replace with your desired URL
+      res.send("<h1 style='color: red'>Record deleted successfully!</h1>");
+    }
 );
 
 // Handle form submission
