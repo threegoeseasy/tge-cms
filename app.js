@@ -91,8 +91,7 @@ const githubDispatch = async (req, res, next) => {
     console.log('GitHub dispatch triggered successfully.');
     next();
   } catch (error) {
-    console.error('Error triggering GitHub dispatch:', error.message);
-    res.status(500).send('Error triggering GitHub dispatch');
+    res.status(500).send('Error triggering GitHub dispatch', error.message);
   }
 };
 
