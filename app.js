@@ -26,6 +26,7 @@ const db = new sqlite3.Database("data.db", async (err) => {
     console.error("Error opening database:", err.message);
   } else {
     console.log("Connected to the database.");
+
     // Create the table if it doesn't exist
     await db.run(`
       CREATE TABLE IF NOT EXISTS records (
@@ -37,12 +38,24 @@ const db = new sqlite3.Database("data.db", async (err) => {
       )
     `);
     console.log("records checked");
-    await db.run(` CREATE TABLE IF NOT EXISTS blog_posts (
-    id INTEGER PRIMARY KEY,
-    content TEXT,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    )`);
-    console.log("blog checked");
+
+    // Create or modify the blog_posts table
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS blog_posts (
+        id INTEGER PRIMARY KEY,
+        slug TEXT,
+        title TEXT,
+        preview TEXT,
+        content TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log("blog_posts checked");
+
+    // Add new columns if they don't exist
+    await db.run(`ALTER TABLE blog_posts ADD COLUMN slug TEXT`);
+    await db.run(`ALTER TABLE blog_posts ADD COLUMN title TEXT`);
+    await db.run(`ALTER TABLE blog_posts ADD COLUMN preview TEXT`);
   }
 });
 
@@ -65,33 +78,33 @@ const authenticate = (req, res, next) => {
 
 const githubDispatch = async (req, res, next) => {
   try {
-    const owner = 'threegoeseasy';
-    const repo = 'threegoeseasy-astro';
+    const owner = "threegoeseasy";
+    const repo = "threegoeseasy-astro";
     const token = process.env.GITHUB_TOKEN; // Store this securely, e.g., in environment variables
 
     const url = `https://api.github.com/repos/${owner}/${repo}/dispatches`;
     const headers = {
-      "Accept": "application/vnd.github+json",
-      "Authorization": `token ${token}`
+      Accept: "application/vnd.github+json",
+      Authorization: `token ${token}`,
     };
     const body = JSON.stringify({
-      event_type: "webhook"
+      event_type: "webhook",
     });
 
     const response = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: headers,
-      body: body
+      body: body,
     });
 
     if (!response.ok) {
       throw new Error(`GitHub dispatch failed: ${response.statusText}`);
     }
 
-    console.log('GitHub dispatch triggered successfully.');
+    console.log("GitHub dispatch triggered successfully.");
     next();
   } catch (error) {
-    res.status(500).send('Error triggering GitHub dispatch', {error});
+    res.status(500).send("Error triggering GitHub dispatch", { error });
   }
 };
 
@@ -211,58 +224,91 @@ app.post(
 
 // Upload blog post
 app.post(
-    "/savePost",
-    checkAuthentication,
-    uploadBlog.none(),
-    async (req, res, next) => {
-      try {
-        // Extract the content from the TinyMCE editor
-        const content = req.body.content; // Adjust this based on how TinyMCE sends the data
+  "/savePost",
+  checkAuthentication,
+  uploadBlog.none(),
+  async (req, res, next) => {
+    try {
+      // Extract the content from the TinyMCE editor and other fields
+      const { slug, title, preview, content } = req.body; // Adjust this based on how TinyMCE sends the data
 
-        // Insert the content into the database
-        await db.run(`INSERT INTO blog_posts (content) VALUES (?)`, [content]);
+      // Insert the content into the database
+      await db.run(
+        `INSERT INTO blog_posts (slug, title, preview, content) VALUES (?, ?, ?, ?)`,
+        [slug, title, preview, content]
+      );
 
-        console.log("Post saved successfully.");
-        next(); // Proceed to the next middleware (githubDispatch)
-      } catch (error) {
-        console.error("Error saving blog post:", error);
-        res.status(500).send("Error saving blog post");
-      }
-    },
-    githubDispatch, // Add the middleware here
-    (req, res) => {
-      // Send a temporary redirect to success page after 2 seconds with meta refresh
-      res.setHeader("Refresh", "2; URL=/"); // Replace with your desired URL
-      res.send("<h1 style='color: green'>Record inserted successfully!</h1>");
+      console.log("Post saved successfully.");
+      next(); // Proceed to the next middleware (githubDispatch)
+    } catch (error) {
+      console.error("Error saving blog post:", error);
+      res.status(500).send("Error saving blog post");
     }
+  },
+  githubDispatch, // Add the middleware here
+  (req, res) => {
+    // Send a temporary redirect to success page after 2 seconds with meta refresh
+    res.setHeader("Refresh", "2; URL=/"); // Replace with your desired URL
+    res.send("<h1 style='color: green'>Record inserted successfully!</h1>");
+  }
+);
+
+// Edit blog post
+app.post(
+  "/editPost/:id",
+  checkAuthentication,
+  uploadBlog.none(),
+  async (req, res, next) => {
+    try {
+      // Extract the content and other fields from the TinyMCE editor
+      const { slug, title, preview, content } = req.body;
+      const { id } = req.params;
+
+      // Update the content in the database
+      await db.run(
+        `UPDATE blog_posts SET slug = ?, title = ?, preview = ?, content = ? WHERE id = ?`,
+        [slug, title, preview, content, id]
+      );
+
+      console.log("Post updated successfully.");
+      next(); // Proceed to the next middleware (if any)
+    } catch (error) {
+      console.error("Error updating blog post:", error);
+      res.status(500).send("Error updating blog post");
+    }
+  },
+  githubDispatch, // Add the middleware here if necessary
+  (req, res) => {
+    // Send a temporary redirect to success page after 2 seconds with meta refresh
+    res.setHeader("Refresh", "2; URL=/"); // Replace with your desired URL
+    res.send("<h1 style='color: green'>Record updated successfully!</h1>");
+  }
 );
 
 // Endpoint for deleting a post by ID
-// Endpoint for deleting a post by ID
 app.delete(
-    "/deletePost/:id",
-    express.urlencoded({ extended: true }),
-    checkAuthentication,
-    (req, res, next) => {
-      const postId = req.params.id;
+  "/deletePost/:id",
+  express.urlencoded({ extended: true }),
+  checkAuthentication,
+  (req, res, next) => {
+    const postId = req.params.id;
 
-      db.run("DELETE FROM blog_posts WHERE id = ?", [postId], (err) => {
-        if (err) {
-          console.error("Error deleting post:", err.message);
-          return res.status(500).send("Error deleting post");
-        } else {
-          console.log(`Post with ID ${postId} deleted.`);
-          req.postId = postId; // Store postId in request object to use in the next middleware if needed
-          next(); // Proceed to the next middleware (githubDispatch)
-        }
-      });
-    },
-    githubDispatch, // Add the middleware here
-    (req, res) => {
-      // Send a temporary redirect to success page after 2 seconds with meta refresh
-      res.setHeader("Refresh", "2; URL=/"); // Replace with your desired URL
-      res.send("<h1 style='color: red'>Record deleted successfully!</h1>");
-    }
+    db.run("DELETE FROM blog_posts WHERE id = ?", [postId], (err) => {
+      if (err) {
+        console.error("Error deleting post:", err.message);
+        return res.status(500).send("Error deleting post");
+      } else {
+        console.log(`Post with ID ${postId} deleted.`);
+      }
+    });
+    next(); // Proceed to the next middleware (githubDispatch)
+  },
+  githubDispatch,
+  (req, res) => {
+    // Send a temporary redirect to success page after 2 seconds with meta refresh
+    res.setHeader("Refresh", "2; URL=/"); // Replace with your desired URL
+    res.send("<h1 style='color: red'>Record deleted successfully!</h1>");
+  }
 );
 
 // Handle form submission
@@ -294,6 +340,18 @@ app.post(
     }
   }
 );
+
+app.get("/getPost/:id", async (req, res) => {
+  const postId = req.params.id;
+  db.get("SELECT * FROM blog_posts WHERE id = ?", [postId], (err, row) => {
+    if (err) {
+      console.error("Error fetching post:", err);
+      res.status(500).send("Error fetching post");
+    } else {
+      res.json(row);
+    }
+  });
+});
 
 // Endpoint to get all records
 app.get("/getAllPosts", (req, res) => {

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit Post</title>
+    <style>
+      /* Basic styling for the posts */
+      .post {
+        border: 1px solid #ccc;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+    </style>
+    <script
+      type="application/javascript"
+      src="/tinymce/js/tinymce/tinymce.min.js"
+    ></script>
+    <script type="application/javascript" src="/my-tinymce-config.js"></script>
+  </head>
+  <body>
+    <h1>Edit Post</h1>
+    <form id="editPostForm">
+      <input type="hidden" id="postId" name="postId" />
+
+      <label for="slug">Slug:</label>
+      <input type="text" id="slug" name="slug" required />
+
+      <label for="title">Title:</label>
+      <input type="text" id="title" name="title" required />
+
+      <label for="preview">Preview:</label>
+      <textarea id="preview" name="preview" required></textarea>
+
+      <label for="content">Content:</label>
+      <textarea id="content" name="content" required></textarea>
+
+      <button type="submit">Update Post</button>
+    </form>
+
+    <script>
+      // Fetch the post ID from the URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const postId = urlParams.get("id");
+
+      // Fetch the post data from the server and fill the form
+      fetch(`/getPost/${postId}`)
+        .then((response) => response.json())
+        .then((post) => {
+          document.getElementById("postId").value = post.id;
+          document.getElementById("slug").value = post.slug;
+          document.getElementById("title").value = post.title;
+          document.getElementById("preview").value = post.preview;
+          tinymce.get("content").setContent(post.content);
+        })
+        .catch((error) => console.error("Error fetching post:", error));
+
+      // Handle the form submission
+      document
+        .getElementById("editPostForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault(); // Prevent the form from submitting normally
+
+          // Create a FormData object from the form
+          const formData = new FormData(event.target);
+
+          // Send a POST request using fetch
+          fetch(`/editPost/${postId}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams(formData).toString(),
+          })
+            .then((response) => response.text())
+            .then((data) => {
+              console.log(data);
+              alert("Post updated successfully!");
+              window.location.href = "/"; // Redirect to main page after successful update
+            })
+            .catch((error) => console.error("Error:", error));
+        });
+    </script>
+  </body>
+</html>
