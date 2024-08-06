@@ -43,21 +43,31 @@
     </form>
 
     <script>
-      // Fetch the post ID from the URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const postId = urlParams.get("id");
+      document.addEventListener("DOMContentLoaded", function () {
+        // Initialize TinyMCE editor
+        tinymce.init({
+          selector: "#my-expressjs-tinymce-app",
+          setup: function (editor) {
+            editor.on("init", function () {
+              // Fetch the post ID from the URL
+              const urlParams = new URLSearchParams(window.location.search);
+              const postId = urlParams.get("id");
 
-      // Fetch the post data from the server and fill the form
-      fetch(`/getPost/${postId}`)
-        .then((response) => response.json())
-        .then((post) => {
-          document.getElementById("postId").value = post.id;
-          document.getElementById("slug").value = post.slug;
-          document.getElementById("title").value = post.title;
-          document.getElementById("preview").value = post.preview;
-          tinymce.get("content").setContent(post.content);
-        })
-        .catch((error) => console.error("Error fetching post:", error));
+              // Fetch the post data from the server and fill the form
+              fetch(`/getPost/${postId}`)
+                .then((response) => response.json())
+                .then((post) => {
+                  document.getElementById("postId").value = post.id;
+                  document.getElementById("slug").value = post.slug || "";
+                  document.getElementById("title").value = post.title || "";
+                  document.getElementById("preview").value = post.preview || "";
+                  editor.setContent(post.content);
+                })
+                .catch((error) => console.error("Error fetching post:", error));
+            });
+          },
+        });
+      });
 
       // Handle the form submission
       document
@@ -69,7 +79,7 @@
           const formData = new FormData(event.target);
 
           // Send a POST request using fetch
-          fetch(`/editPost/${postId}`, {
+          fetch(`/editPost/${document.getElementById("postId").value}`, {
             method: "POST",
             headers: {
               "Content-Type": "application/x-www-form-urlencoded",
