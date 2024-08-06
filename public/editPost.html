@@ -55,7 +55,15 @@
           document.getElementById("slug").value = post.slug;
           document.getElementById("title").value = post.title;
           document.getElementById("preview").value = post.preview;
-          tinymce.get("my-expressjs-tinymce-app").setContent(post.content);
+          // tinymce.get("my-expressjs-tinymce-app").setContent(post.content);
+          tinymce.init({
+            selector: "#my-expressjs-tinymce-app",
+            setup: function (editor) {
+              editor.on("init", function (e) {
+                editor.setContent(post.content);
+              });
+            },
+          });
         })
         .catch((error) => console.error("Error fetching post:", error));
 
