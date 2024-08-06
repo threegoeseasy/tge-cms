@@ -47,25 +47,17 @@
       const urlParams = new URLSearchParams(window.location.search);
       const postId = urlParams.get("id");
 
-      // Initialize TinyMCE editor
-      tinymce.init({
-        selector: "#my-expressjs-tinymce-app",
-        setup: function (editor) {
-          editor.on("init", function () {
-            // Fetch the post data from the server and fill the form
-            fetch(`/getPost/${postId}`)
-              .then((response) => response.json())
-              .then((post) => {
-                document.getElementById("postId").value = post.id;
-                document.getElementById("slug").value = post.slug || "";
-                document.getElementById("title").value = post.title || "";
-                document.getElementById("preview").value = post.preview || "";
-                editor.setContent(post.content);
-              })
-              .catch((error) => console.error("Error fetching post:", error));
-          });
-        },
-      });
+      // Fetch the post data from the server and fill the form
+      fetch(`/getPost/${postId}`)
+        .then((response) => response.json())
+        .then((post) => {
+          document.getElementById("postId").value = post.id;
+          document.getElementById("slug").value = post.slug;
+          document.getElementById("title").value = post.title;
+          document.getElementById("preview").value = post.preview;
+          tinymce.get("my-expressjs-tinymce-app").setContent(post.content);
+        })
+        .catch((error) => console.error("Error fetching post:", error));
 
       // Handle the form submission
       document
