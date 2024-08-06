@@ -52,10 +52,32 @@ const db = new sqlite3.Database("data.db", async (err) => {
     `);
     console.log("blog_posts checked");
 
-    // Add new columns if they don't exist
-    await db.run(`ALTER TABLE blog_posts ADD COLUMN slug TEXT`);
-    await db.run(`ALTER TABLE blog_posts ADD COLUMN title TEXT`);
-    await db.run(`ALTER TABLE blog_posts ADD COLUMN preview TEXT`);
+    // Check and add new columns if they don't exist
+    const addColumnIfNotExists = async (table, column, columnDef) => {
+      db.all(`PRAGMA table_info(${table})`, (err, info) => {
+        if (err) {
+          console.error(`Error getting table info for ${table}:`, err.message);
+        } else {
+          const columns = info.map((col) => col.name);
+          if (!columns.includes(column)) {
+            db.run(
+              `ALTER TABLE ${table} ADD COLUMN ${column} ${columnDef}`,
+              (err) => {
+                if (err)
+                  console.error(
+                    `Error adding column ${column} to ${table}:`,
+                    err.message
+                  );
+              }
+            );
+          }
+        }
+      });
+    };
+
+    await addColumnIfNotExists("blog_posts", "slug", "TEXT");
+    await addColumnIfNotExists("blog_posts", "title", "TEXT");
+    await addColumnIfNotExists("blog_posts", "preview", "TEXT");
   }
 });
 
