@@ -46,14 +46,6 @@
       // Fetch the post ID from the URL
       const urlParams = new URLSearchParams(window.location.search);
       const postId = urlParams.get("id");
-      tinymce.init({
-        selector: "#my-expressjs-tinymce-app",
-        setup: function (editor) {
-          editor.on("init", function (e) {
-            editor.setContent(post.content);
-          });
-        },
-      });
 
       // Fetch the post data from the server and fill the form
       fetch(`/getPost/${postId}`)
@@ -64,7 +56,14 @@
           document.getElementById("title").value = post.title;
           document.getElementById("preview").value = post.preview;
           setTimeout(() => {
-            tinymce.get("my-expressjs-tinymce-app").setContent(post.content);
+            tinymce.init({
+              selector: "#my-expressjs-tinymce-app",
+              setup: function (editor) {
+                editor.on("init", function (e) {
+                  editor.setContent(post.content);
+                });
+              },
+            });
           }, 100);
         })
         .catch((error) => console.error("Error fetching post:", error));
