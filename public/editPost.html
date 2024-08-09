@@ -42,7 +42,7 @@
       const postId = urlParams.get("id");
 
       // Fetch the post data from the server and fill the form
-      fetch(`/getPost/${postId}`)
+      fetch(`/getPostById/${postId}`)
         .then((response) => response.json())
         .then((post) => {
           document.getElementById("postId").value = post.id;

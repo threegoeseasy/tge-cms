@@ -367,9 +367,21 @@ app.post(
   }
 );
 
-app.get("/getPost/:id", async (req, res) => {
+app.get("/getPostById/:id", async (req, res) => {
   const postId = req.params.id;
   db.get("SELECT * FROM blog_posts WHERE id = ?", [postId], (err, row) => {
+    if (err) {
+      console.error("Error fetching post:", err);
+      res.status(500).send("Error fetching post");
+    } else {
+      res.json(row);
+    }
+  });
+});
+
+app.get("/getPostBySlug/:slug", async (req, res) => {
+  const postSlug = req.params.slug;
+  db.get("SELECT * FROM blog_posts WHERE slug = ?", [postSlug], (err, row) => {
     if (err) {
       console.error("Error fetching post:", err);
       res.status(500).send("Error fetching post");
@@ -388,6 +400,22 @@ app.get("/getAllPosts", (req, res) => {
       res.status(500).send("Error retrieving records");
     } else {
       res.json(rows);
+    }
+  });
+});
+
+// Endpoint to get all slugs
+app.get("/getSlugs", (req, res) => {
+  const sql = "SELECT slug FROM blog_posts";
+  db.all(sql, [], (err, rows) => {
+    if (err) {
+      console.error("Error retrieving slugs:", err.message);
+      res.status(500).send("Error retrieving slugs");
+    } else {
+      const paths = rows.map((row) => ({
+        params: { page: row.slug },
+      }));
+      res.json(paths);
     }
   });
 });
