@@ -10,6 +10,7 @@ const cookieParser = require("cookie-parser");
 const favicon = require("serve-favicon");
 
 const app = express();
+app.use(express.json()); // Parses JSON request bodies
 
 app.use(favicon(path.join(__dirname, "public", "favicon.ico")));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -99,6 +100,10 @@ const authenticate = (req, res, next) => {
 };
 
 const githubDispatch = async (req, res, next) => {
+  if ((process.env.APP_IP = "localhost")) {
+    next();
+    return;
+  }
   try {
     const owner = "threegoeseasy";
     const repo = "threegoeseasy-astro";
@@ -126,7 +131,7 @@ const githubDispatch = async (req, res, next) => {
     console.log("GitHub dispatch triggered successfully.");
     next();
   } catch (error) {
-    res.status(500).send("Error triggering GitHub dispatch", { error });
+    res.status(500).send("Error triggering GitHub dispatch" + error);
   }
 };
 
@@ -282,27 +287,26 @@ app.post(
   uploadBlog.none(),
   async (req, res, next) => {
     try {
-      // Extract the content and other fields from the TinyMCE editor
+      console.log(req.body, req);
+
       const { slug, title, preview, content } = req.body;
       const { id } = req.params;
 
-      // Update the content in the database
       await db.run(
         `UPDATE blog_posts SET slug = ?, title = ?, preview = ?, content = ? WHERE id = ?`,
         [slug, title, preview, content, id]
       );
 
       console.log("Post updated successfully.");
-      next(); // Proceed to the next middleware (if any)
+      next();
     } catch (error) {
       console.error("Error updating blog post:", error);
       res.status(500).send("Error updating blog post");
     }
   },
-  githubDispatch, // Add the middleware here if necessary
+  githubDispatch,
   (req, res) => {
-    // Send a temporary redirect to success page after 2 seconds with meta refresh
-    res.setHeader("Refresh", "2; URL=/"); // Replace with your desired URL
+    res.setHeader("Refresh", "2; URL=/");
     res.send("<h1 style='color: green'>Record updated successfully!</h1>");
   }
 );

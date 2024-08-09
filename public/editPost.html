@@ -6,17 +6,15 @@
     <title>Edit Post</title>
     <style>
       /* Basic styling for the posts */
-      .post {
+      form {
         border: 1px solid #ccc;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
         padding: 20px;
         margin-bottom: 20px;
       }
     </style>
-    <script
-      type="application/javascript"
-      src="/tinymce/js/tinymce/tinymce.min.js"
-    ></script>
-    <script type="application/javascript" src="/my-tinymce-config.js"></script>
   </head>
   <body>
     <h1>Edit Post</h1>
@@ -33,11 +31,7 @@
       <textarea id="preview" name="preview" required></textarea>
 
       <label for="content">Content:</label>
-      <textarea
-        name="content"
-        id="my-expressjs-tinymce-app"
-        required
-      ></textarea>
+      <textarea name="content" id="content"></textarea>
 
       <button type="submit">Update Post</button>
     </form>
@@ -46,7 +40,6 @@
       // Fetch the post ID from the URL
       const urlParams = new URLSearchParams(window.location.search);
       const postId = urlParams.get("id");
-      let content;
 
       // Fetch the post data from the server and fill the form
       fetch(`/getPost/${postId}`)
@@ -56,9 +49,8 @@
           document.getElementById("slug").value = post.slug;
           document.getElementById("title").value = post.title;
           document.getElementById("preview").value = post.preview;
-          content = post.content;
-        })
-        .catch((error) => console.error("Error fetching post:", error));
+          document.getElementById("content").value = post.content;
+        });
 
       // Handle the form submission
       document
@@ -66,16 +58,19 @@
         .addEventListener("submit", function (event) {
           event.preventDefault(); // Prevent the form from submitting normally
 
-          // Create a FormData object from the form
+          // Create FormData object
           const formData = new FormData(event.target);
+
+          // Convert FormData to JSON
+          const data = Object.fromEntries(formData.entries());
 
           // Send a POST request using fetch
           fetch(`/editPost/${postId}`, {
             method: "POST",
             headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
+              "Content-Type": "application/json", // Important for sending JSON
             },
-            body: new URLSearchParams(formData).toString(),
+            body: JSON.stringify(data), // Convert object to JSON string
           })
             .then((response) => response.text())
             .then((data) => {
@@ -85,19 +80,6 @@
             })
             .catch((error) => console.error("Error:", error));
         });
-
-      setTimeout(() => {
-        document.getElementById("my-expressjs-tinymce-app").value = content;
-      }, 1000);
-
-      tinymce.init({
-        selector: "#my-expressjs-tinymce-app",
-        setup: (editor) => {
-          editor.on("init", (e) => {
-            editor.setContent(content);
-          });
-        },
-      });
     </script>
   </body>
 </html>
